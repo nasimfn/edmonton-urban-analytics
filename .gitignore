@@ -1,0 +1,16 @@
+# Ignore database and local files
+*.db
+*.sqlite
+data_raw/
+data_clean/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Power BI (optional: keep if you want to upload it later)
+# *.pbix
