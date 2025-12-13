@@ -48,11 +48,11 @@ property_clean = df[[
 property_clean["assessed_value"] = pd.to_numeric(property_clean["assessed_value"], errors="coerce")
 
 conn = sqlite3.connect(DB_PATH)
-conn.execute("DELETE FROM property;")
+conn.execute("DELETE FROM properties;")
 conn.commit()
 
 property_clean.to_sql(
-    "property",
+    "properties",
     conn,
     if_exists="append",
     index=False
