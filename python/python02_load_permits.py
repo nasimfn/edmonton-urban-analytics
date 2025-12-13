@@ -38,6 +38,8 @@ df["neighborhood"] = (
     .str.upper()
 )
 
+df = df.rename(columns={"address": "raw_address"})
+
 permits_clean = df[[
     "issued_date",
     "year",
@@ -45,7 +47,7 @@ permits_clean = df[[
     "job_category",
     "work_type",
     "project_value",
-    "address",
+    "raw_address",
     "neighborhood",
     "latitude",
     "longitude"

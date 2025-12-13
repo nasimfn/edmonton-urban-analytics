@@ -33,13 +33,14 @@ CREATE TABLE properties (
 CREATE TABLE permits (
   permit_id INTEGER PRIMARY KEY AUTOINCREMENT,
   issued_date TEXT,
-  permit_type TEXT,
-  work_class_group TEXT,
+  year INTEGER,
+  month_number INTEGER,
+  job_category TEXT,
+  work_type TEXT,
   project_value REAL,
-  contractor TEXT,
+  raw_address TEXT,
   neighborhood TEXT,
   latitude REAL,
   longitude REAL,
-  raw_address TEXT,
   FOREIGN KEY (neighborhood) REFERENCES neighborhood_profiles(neighborhood)
 );
