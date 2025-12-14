@@ -36,7 +36,7 @@ with sqlite3.connect(DB_PATH) as conn:
 # - I treat missing project values as 0 for totals
 # - I'll also create "missing rate" as a feature (useful signal)
 df["total_construction_value"] = df["total_construction_value"].fillna(0)
-df["avg_construction_value"] = df["avg_construction_value"].fillna(np.nan)
+
 
 neigh = (
     df.groupby("neighborhood", as_index=False)
@@ -61,6 +61,8 @@ missing_rate = (
 )
 neigh = neigh.merge(missing_rate, on="neighborhood", how="left")
 
+# Keep only neighborhoods that exist in properties (recommended)
+neigh = neigh.dropna(subset=["n_properties", "avg_assessed_value"])
 
 # 3) Feature engineering (reduce skew with log1p)
 
@@ -88,6 +90,36 @@ X["avg_permit_size"] = X["avg_permit_size"].fillna(X["avg_permit_size"].median()
 FEATURES_FINAL = FEATURES + ["avg_permit_size"]
 
 X = X[FEATURES_FINAL]
+
+# ---- DEBUG: find NaNs before scaling ----
+na_counts = X.isna().sum().sort_values(ascending=False)
+print("\nNaN counts in features:")
+print(na_counts[na_counts > 0])
+
+if X.isna().any().any():
+    bad_rows = X[X.isna().any(axis=1)].copy()
+    print(f"\nRows with NaNs: {len(bad_rows)}")
+    print("Example rows (first 10):")
+    print(pd.concat([neigh.loc[bad_rows.index, ["neighborhood"]], bad_rows], axis=1).head(10))
+
+# ---- FIX: impute remaining missing values ----
+# For counts/sizes: fill with 0
+zero_fill = ["n_properties"]
+for c in zero_fill:
+    if c in X.columns:
+        X[c] = X[c].fillna(0)
+
+# For log features / rates: fill with median (robust)
+median_fill = ["avg_value_missing_rate", "log_avg_assessed_value",
+               "log_total_permits", "log_total_construction_value",
+               "log_avg_monthly_construction_value", "avg_monthly_permits"]
+for c in median_fill:
+    if c in X.columns:
+        X[c] = X[c].fillna(X[c].median())
+
+# Safety check
+if X.isna().any().any():
+    raise ValueError("Still have NaNs after imputation. Check feature engineering.")
 
 
 # 5) Scale features (KMeans needs this)
