@@ -61,7 +61,7 @@ missing_rate = (
 )
 neigh = neigh.merge(missing_rate, on="neighborhood", how="left")
 
-# Keep only neighborhoods that exist in properties (recommended)
+# Keep only neighborhoods that exist in properties
 neigh = neigh.dropna(subset=["n_properties", "avg_assessed_value"])
 
 # 3) Feature engineering (reduce skew with log1p)
@@ -122,7 +122,7 @@ if X.isna().any().any():
     raise ValueError("Still have NaNs after imputation. Check feature engineering.")
 
 
-# 5) Scale features (KMeans needs this)
+# 5) Scale features
 
 scaler = StandardScaler()
 X_scaled = scaler.fit_transform(X)
@@ -137,13 +137,13 @@ for k in range(2, 11):
     km.fit(X_scaled)
     inertias[k] = km.inertia_
 
-# Pick a default K (you can change this)
+# Pick a default K
 K = 5
 
 kmeans = KMeans(n_clusters=K, random_state=42, n_init=10)
 neigh["cluster"] = kmeans.fit_predict(X_scaled)
 
-# Label clusters by a human-friendly ordering (e.g., by avg assessed value)
+# Label clusters by avg assessed value
 cluster_order = (
     neigh.groupby("cluster")["avg_assessed_value"].mean()
     .sort_values()

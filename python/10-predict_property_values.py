@@ -18,13 +18,12 @@ DB_PATH = ROOT / "edmonton.db"
 OUT_DIR = ROOT / "ml_outputs"
 OUT_DIR.mkdir(exist_ok=True)
 
-SAMPLE_N = 120_000      # keep it memory-safe on most laptops
+SAMPLE_N = 120_000      
 TEST_SIZE = 0.20
 RANDOM_STATE = 42
 
-# --- 1) Load modeling data
-# We join properties to neighborhood-level permit features.
-# NOTE: This does NOT do address matching; it's neighborhood-level features.
+# 1) Load modeling data
+
 QUERY = """
 WITH permit_features AS (
   SELECT
@@ -64,25 +63,25 @@ with sqlite3.connect(DB_PATH) as conn:
 
 print(f"Loaded properties rows: {len(df):,}")
 
-# --- 2) Basic filtering to remove obvious extremes (optional but helps stability)
+# 2) Basic filtering to remove obvious extremes 
 df = df[df["assessed_value"].notna()]
 df = df[(df["assessed_value"] > 0) & (df["assessed_value"] < 50_000_000)]
 print(f"After basic filtering (0 < value < 50M): {len(df):,}")
 
-# --- 3) Show missingness (so you understand where NaNs come from)
+# 3) Show missingness 
 nulls = df.isna().sum().sort_values(ascending=False)
 print("\nNulls per feature column (top 12):")
 print(nulls.head(12))
 
-# --- 4) Sample to avoid memory errors (you hit this before)
+# 4) Sample to avoid memory errors 
 if len(df) > SAMPLE_N:
     df = df.sample(SAMPLE_N, random_state=RANDOM_STATE)
 print(f"\nSampled to {len(df):,} rows for modeling (memory-safe).")
 
-# --- 5) Create target (log transform helps skewed housing values)
+# 5) Create target (log transform helps skewed housing values)
 y = np.log1p(df["assessed_value"].values)
 
-# Feature set (keep it simple + strong)
+# Feature set 
 feature_cols_num = [
     "latitude", "longitude",
     "permits_total", "permits_avg_monthly",
@@ -91,14 +90,12 @@ feature_cols_num = [
 ]
 feature_cols_cat = [
     "tax_class", "garage", "ward",
-    # neighborhood_id is sometimes missing; treat as categorical or drop.
-    # We'll keep it as categorical because it can capture area structure.
     "neighborhood_id",
 ]
 
 X = df[feature_cols_num + feature_cols_cat].copy()
 
-# --- 6) Train/test split
+# 6) Train/test split
 X_train, X_test, y_train, y_test = train_test_split(
     X, y, test_size=TEST_SIZE, random_state=RANDOM_STATE
 )
@@ -108,7 +105,7 @@ to_dense = FunctionTransformer(
     accept_sparse=True
 )
 
-# --- 7) Preprocessing (THIS fixes your NaN crash)
+# 7) Preprocessing (THIS fixes your NaN crash)
 # - Numeric: median imputation
 # - Categorical: most_frequent imputation + OneHot
 numeric_transformer = Pipeline(steps=[
@@ -128,8 +125,6 @@ preprocess = ColumnTransformer(
     remainder="drop",
 )
 
-# Model that is strong + fast and works well on tabular data
-# (Also tolerates non-linearities better than linear regression)
 model = HistGradientBoostingRegressor(
     random_state=RANDOM_STATE,
     max_depth=6,
@@ -144,7 +139,7 @@ pipe = Pipeline(steps=[
 ])
 
 
-# --- 8) Fit + evaluate on log target
+# 8) Fit + evaluate on log target
 pipe.fit(X_train, y_train)
 pred_log = pipe.predict(X_test)
 
@@ -164,7 +159,7 @@ print(pd.DataFrame([
     {"model": "hgb_log_target", "MAE": mae_log, "RMSE": rmse_log, "R2": r2_log, "n_test": len(y_test)},
 ]))
 
-# --- 9) Optional: “approx dollars” view for intuition (not a perfect metric)
+
 # Back-transform both y and pred, then compute MAE in dollars.
 y_test_dollars = np.expm1(y_test)
 pred_dollars = np.expm1(pred_log)
@@ -178,7 +173,7 @@ print(pd.DataFrame([
     {"model": "hgb_dollars_approx", "MAE": mae_dollars, "RMSE": rmse_dollars, "R2": r2_dollars, "n_test": len(y_test_dollars)},
 ]))
 
-# --- 10) Save a sample output for Power BI / portfolio
+# 9) Save a sample output for Power BI / portfolio
 out = X_test.copy()
 out["assessed_value_true"] = np.expm1(y_test)
 out["assessed_value_pred"] = np.expm1(pred_log)

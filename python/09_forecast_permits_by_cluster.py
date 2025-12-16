@@ -12,9 +12,7 @@ DB_PATH = ROOT / "edmonton.db"
 OUT = ROOT / "powerbi" / "cluster_forecasts.csv"
 OUT.parent.mkdir(exist_ok=True)
 
-# -------------------------------------------------
 # 1) Load data: monthly permits + clusters
-# -------------------------------------------------
 
 QUERY = """
 SELECT
@@ -35,9 +33,7 @@ df["date"] = pd.to_datetime(
     dict(year=df.year, month=df.month_number, day=1)
 )
 
-# -------------------------------------------------
 # 2) Aggregate to CLUSTER x MONTH
-# -------------------------------------------------
 
 cluster_month = (
     df.groupby(["cluster", "date"], as_index=False)
@@ -47,9 +43,7 @@ cluster_month = (
       .sort_values(["cluster", "date"])
 )
 
-# -------------------------------------------------
 # 3) Create lag features (time series ML)
-# -------------------------------------------------
 
 cluster_month["permits_lag1"] = (
     cluster_month.groupby("cluster")["permits"].shift(1)
@@ -64,9 +58,7 @@ cluster_month["year"] = cluster_month["date"].dt.year
 # Drop rows with missing lags
 model_df = cluster_month.dropna().copy()
 
-# -------------------------------------------------
 # 4) Train one model PER CLUSTER
-# -------------------------------------------------
 
 results = []
 
@@ -89,7 +81,7 @@ for cluster_id in model_df["cluster"].unique():
         n_estimators=200,
         random_state=42
     )
-    # model = LinearRegression()  # <- switch if you want
+    
 
     model.fit(X_train, y_train)
     preds = model.predict(X_test)
@@ -101,9 +93,7 @@ for cluster_id in model_df["cluster"].unique():
         "R2": r2_score(y_test, preds)
     })
 
-# -------------------------------------------------
 # 5) Forecast NEXT month for each cluster
-# -------------------------------------------------
 
 forecasts = []
 
@@ -131,9 +121,7 @@ for cluster_id in model_df["cluster"].unique():
         "forecast_next_month_permits": forecast
     })
 
-# -------------------------------------------------
 # 6) Save outputs
-# -------------------------------------------------
 
 results_df = pd.DataFrame(results)
 forecast_df = pd.DataFrame(forecasts)
