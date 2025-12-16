@@ -10,6 +10,7 @@ from sklearn.preprocessing import OneHotEncoder
 from sklearn.impute import SimpleImputer
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from sklearn.ensemble import HistGradientBoostingRegressor
+from sklearn.preprocessing import FunctionTransformer
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -102,6 +103,11 @@ X_train, X_test, y_train, y_test = train_test_split(
     X, y, test_size=TEST_SIZE, random_state=RANDOM_STATE
 )
 
+to_dense = FunctionTransformer(
+    lambda x: x.toarray() if hasattr(x, "toarray") else x,
+    accept_sparse=True
+)
+
 # --- 7) Preprocessing (THIS fixes your NaN crash)
 # - Numeric: median imputation
 # - Categorical: most_frequent imputation + OneHot
@@ -132,9 +138,11 @@ model = HistGradientBoostingRegressor(
 )
 
 pipe = Pipeline(steps=[
-    ("preprocess", preprocess),
+    ("prep", preprocess),
+    ("to_dense", to_dense),
     ("model", model),
 ])
+
 
 # --- 8) Fit + evaluate on log target
 pipe.fit(X_train, y_train)
