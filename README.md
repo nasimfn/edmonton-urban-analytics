@@ -61,4 +61,14 @@ Three interactive pages:
    - KPI cards (R², MAE, test samples)
    - Interactive slicers (neighborhood, tax class, ward)
 
+## 📸 Dashboards & Visual Outputs
+
+### Urban Development Overview
+![Urban Development Overview](dashboard_overview.png)
+
+### Neighborhood Clustering
+![Neighborhood Clustering](neighborhood_clusters.png)
+
+### Property Value Model Performance
+![Property Value Model Performance](model_performance.png)
 
